@@ -3,7 +3,7 @@ info:
   title: Marinas RAG Actions
   version: 1.0.0
 servers:
-  - url: https://<cloudrun-url>
+  - url: https://marinas-rag-actions-1067662611422.europe-southwest1.run.app
 paths:
   /health:
     get:
