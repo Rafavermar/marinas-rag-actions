@@ -12,10 +12,9 @@ class MongoStorage:
     """Wrapper around Motor client for application collections."""
 
     def __init__(self, mongo_uri: str, db_name: str = "marinas") -> None:
-        db_name = os.getenv("MONGO_DB", db_name)
+        # tz_aware=True hace que los datetimes que vienen de Mongo tengan tzinfo
         self.client = AsyncIOMotorClient(mongo_uri, tz_aware=True, tzinfo=timezone.utc)
         self.db = self.client[db_name]
-
     async def ensure_indexes(self) -> None:
         await self.db.chunks.create_index([("content", "text")])
         await self.db.chunks.create_index([("marina_id", 1), ("created_at", -1)])

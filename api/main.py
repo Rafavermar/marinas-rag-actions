@@ -76,9 +76,16 @@ async def ingest_guard(storage: MongoStorage, marina_id: Optional[str]) -> Tuple
     last_ingest = await storage.get_last_ingest(marina_id)
     if not last_ingest:
         return False, None
+
+    # Mongo puede devolver datetime "naive" (sin tzinfo). Normalizamos a UTC.
+    if last_ingest.tzinfo is None:
+        last_ingest = last_ingest.replace(tzinfo=timezone.utc)
+
     now = datetime.now(timezone.utc)
+
     if now - last_ingest < timedelta(days=14):
         return True, last_ingest
+
     return False, last_ingest
 
 
