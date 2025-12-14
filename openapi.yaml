@@ -1,0 +1,164 @@
+openapi: 3.0.3
+info:
+  title: Marinas RAG Actions
+  version: 1.0.0
+servers:
+  - url: https://<cloudrun-url>
+paths:
+  /health:
+    get:
+      summary: Health check
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+  /search:
+    post:
+      summary: Search chunks
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SearchRequest'
+      responses:
+        '200':
+          description: Search results
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SearchResponse'
+  /fetch:
+    post:
+      summary: Fetch chunks by ids
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FetchRequest'
+      responses:
+        '200':
+          description: Chunk contents
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FetchResponse'
+  /admin/ingest:
+    post:
+      summary: Trigger ingestion
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/IngestRequest'
+      responses:
+        '200':
+          description: Ingest started or skipped
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IngestResponse'
+        '409':
+          description: Ingest already running
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+  schemas:
+    HealthResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: ok
+    SearchRequest:
+      type: object
+      required: [query]
+      properties:
+        query:
+          type: string
+        marina_id:
+          type: string
+        k:
+          type: integer
+          minimum: 1
+          maximum: 50
+          default: 5
+    SearchResult:
+      type: object
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        marina_id:
+          type: string
+        source_url:
+          type: string
+        kind:
+          type: string
+        score:
+          type: number
+          format: float
+    SearchResponse:
+      type: object
+      properties:
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/SearchResult'
+    FetchRequest:
+      type: object
+      required: [ids]
+      properties:
+        ids:
+          type: array
+          items:
+            type: string
+    FetchItem:
+      type: object
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        content:
+          type: string
+        source_url:
+          type: string
+        metadata:
+          type: object
+    FetchResponse:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/FetchItem'
+    IngestRequest:
+      type: object
+      properties:
+        marina_id:
+          type: string
+    IngestResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: started
+        started_at:
+          type: string
+          format: date-time
+          nullable: true
+        last_ingest_at:
+          type: string
+          format: date-time
+          nullable: true

@@ -1,0 +1,6 @@
+marinas:
+  - id: benalmadena
+    name: Puerto Deportivo de Benalmádena
+    urls:
+      - "https://puertobenalmadena.es/tarifas/"
+      - "https://puertobenalmadena.es/contacto/"
