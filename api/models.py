@@ -45,6 +45,7 @@ class FetchResponse(BaseModel):
 
 class IngestRequest(BaseModel):
     marina_id: Optional[str] = None
+    force: bool = False
 
 
 class IngestResponse(BaseModel):

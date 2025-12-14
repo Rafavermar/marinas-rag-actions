@@ -148,6 +148,9 @@ components:
       properties:
         marina_id:
           type: string
+        force:
+          type: boolean
+          default: false
     IngestResponse:
       type: object
       properties:

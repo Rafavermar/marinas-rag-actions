@@ -96,7 +96,12 @@ async def admin_ingest(
     storage: MongoStorage = Depends(get_storage),
 ) -> IngestResponse:
     marina_id = payload.marina_id
-    should_skip, last_ingest = await ingest_guard(storage, marina_id)
+    should_skip = False
+    last_ingest = None
+
+    if not payload.force:
+        should_skip, last_ingest = await ingest_guard(storage, marina_id)
+
     if should_skip:
         return IngestResponse(status="skipped", last_ingest_at=last_ingest)
 
