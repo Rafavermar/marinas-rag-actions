@@ -4,3 +4,33 @@ marinas:
     urls:
       - "https://puertobenalmadena.es/tarifas/"
       - "https://puertobenalmadena.es/contacto/"
+
+  - id: marina_del_este
+    name: Marina del Este
+    urls:
+      - "https://marinasmediterraneo.es/marina/marina-alquiler-de-atraques/"
+
+  - id: puerto_banus
+    name: Puerto Banús
+    urls:
+      - "https://puerto-banus.com/"
+
+  - id: puerto_sherry
+    name: Puerto Sherry
+    urls:
+      - "https://www.puertosherry.com/atraques-y-servicios/"
+
+  - id: puerto_deportivo_marbella
+    name: Puerto Deportivo Marbella
+    urls:
+      - "https://puertodeportivo.marbella.es/servicios-y-tarifas.html"
+
+  - id: puerto_estepona
+    name: Puerto Deportivo Estepona
+    urls:
+      - "https://marinasmediterraneo.es/estepona/alquiler-de-atraques-en-estepona/"
+
+  - id: puerto_motril
+    name: Puerto Deportivo Motril
+    urls:
+      - "https://marinamotril.net/"

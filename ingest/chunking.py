@@ -1,11 +1,25 @@
 """Chunking helpers for linear content."""
 from typing import List, Optional
+import os
+import re
+from urllib.parse import urlparse, unquote
 
 from ingest.extract_blocks import ContentBlock
 
 TARGET_SIZE = 8000
 WINDOW_SIZE = 5
 
+def _title_from_source_url(source_url: str) -> str:
+    """
+    Deriva un título razonable desde la URL (ideal para PDFs).
+    Ej: .../Tarifas_MEste.pdf -> 'Tarifas MEste'
+    """
+    path = urlparse(source_url).path
+    name = unquote(os.path.basename(path))
+    name = re.sub(r"\.pdf$", "", name, flags=re.IGNORECASE)
+    name = name.replace("_", " ").replace("-", " ")
+    name = re.sub(r"\s+", " ", name).strip()
+    return name or "Documento PDF"
 
 def build_chunks(blocks: List[ContentBlock]) -> List[ContentBlock]:
     chunks: List[ContentBlock] = []
@@ -16,10 +30,21 @@ def build_chunks(blocks: List[ContentBlock]) -> List[ContentBlock]:
             text = "\n\n".join(b.content for b in buffer)
             title = next((b.title for b in buffer if b.title), "")
             source_url: Optional[str] = next((b.source_url for b in buffer if b.source_url), None)
+
+            # Fallback: si no hay título y es PDF, derivarlo del filename
+            if not title and source_url and source_url.lower().endswith(".pdf"):
+                title = _title_from_source_url(source_url)
+
             chunks.append(ContentBlock("text", text, title=title, order=len(chunks), source_url=source_url))
             buffer.clear()
 
     for idx, block in enumerate(blocks):
+
+        # IMPORTANT: do not mix different sources in the same chunk
+        current_source_url: Optional[str] = next((b.source_url for b in buffer if b.source_url), None)
+        if buffer and current_source_url and block.source_url and block.source_url != current_source_url:
+            flush_buffer()
+
         if block.kind == "table":
             flush_buffer()
             chunks.append(
