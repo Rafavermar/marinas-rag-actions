@@ -100,6 +100,7 @@ class MongoStorage:
                         "order": doc.get("order"),
                         "created_at": doc.get("created_at"),
                         "marina_id": doc.get("marina_id"),
+                        "source_url": doc.get("source_url", ""),
                     },
                 }
             )

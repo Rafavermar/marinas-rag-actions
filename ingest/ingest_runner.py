@@ -1,12 +1,24 @@
-"""Entry point for ingestion pipeline."""
+"""Entry point for ingestion pipeline.
+
+Strategy (robust + minimal):
+- Treat marinas.urls as stable landing pages (HTML) whenever possible.
+- From each landing HTML:
+  - extract headings/paragraphs/tables (HTML)
+  - discover linked PDFs (tariffs/prices)
+- Also support direct PDF URLs listed in sources.yaml (optional fallback).
+- Fetch PDFs and extract text.
+- Chunk everything and upsert to MongoDB with source_url for traceability.
+"""
 import yaml
 from datetime import datetime, timezone
 from typing import Dict, List, Optional
 
 from api.storage_mongo import MongoStorage
 from ingest.chunking import build_chunks
-from ingest.extract_blocks import ContentBlock, extract_blocks
+from ingest.extract_blocks import ContentBlock, extract_blocks, extract_blocks_from_text
 from ingest.fetch_html import fetch_all
+from ingest.fetch_docs import fetch_all_docs
+from ingest.url_discovery import discover_pdf_links, dedup_keep_order
 
 
 async def load_sources(marina_id: Optional[str] = None) -> List[Dict[str, object]]:
@@ -30,14 +42,36 @@ async def run_ingest(storage: MongoStorage, marina_id: Optional[str] = None) -> 
             "urls": marina.get("urls", []),
         }
         await storage.upsert_marina(marina_doc)
-        html_pages = await fetch_all(marina_doc["urls"])
+
+        seed_urls = marina_doc["urls"]
+        if not seed_urls:
+            continue
+
+        html_seed_urls = [u for u in seed_urls if not u.lower().endswith(".pdf")]
+        direct_pdf_urls = [u for u in seed_urls if u.lower().endswith(".pdf")]
+
         blocks: List[ContentBlock] = []
-        for html, url in zip(html_pages, marina_doc["urls"]):
-            extracted = extract_blocks(html, source_url=url)
-            blocks.extend(extracted)
+        discovered_pdf_urls: List[str] = []
+
+        # 1) Fetch + extract from HTML landings
+        if html_seed_urls:
+            html_pages = await fetch_all(html_seed_urls)
+            for html, url in zip(html_pages, html_seed_urls):
+                blocks.extend(extract_blocks(html, source_url=url))
+                discovered_pdf_urls.extend(discover_pdf_links(html, base_url=url, limit=5))
+
+        # 2) Fetch PDFs (direct + discovered)
+        pdf_urls = dedup_keep_order([*direct_pdf_urls, *discovered_pdf_urls])
+        if pdf_urls:
+            docs = await fetch_all_docs(pdf_urls)
+            for doc in docs:
+                if doc.kind == "text" and doc.content:
+                    blocks.extend(extract_blocks_from_text(doc.content, source_url=doc.url))
+
+        # 3) Chunk + persist
         chunks = build_chunks(blocks)
         for chunk in chunks:
-            source_url = chunk.source_url or marina_doc["urls"][0]
+            source_url = chunk.source_url or seed_urls[0]
             content_hash = storage.hash_content(f"{marina_doc['id']}::{source_url}::{chunk.content}")
             record = {
                 "marina_id": marina_doc["id"],
